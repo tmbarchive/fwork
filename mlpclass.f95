@@ -68,36 +68,64 @@ contains
     forall (i=1:net%noutput) z(i) = sigmoid(z(i))
   end subroutine mlp_forward
 
-  subroutine mlp_backward(z,x,actual,eta)
-    real, intent(out) :: z(:),actual(:)
-    real, intent(in) :: x(:),eta
-    real y(net%nhidden),delta2(net%noutput),delta1(net%nhidden)
-    integer i,j
+  function mlp_error(actuals,xs) result(errs)
+    real, intent(in) :: actuals(:,:)
+    real, intent(in) :: xs(:,:)
+    real :: z(size(actuals,2))
+    real :: errs(2)
+    integer i,row
+    if (size(xs,1)/=size(actuals,1)) stop "input size mismatch"
+    if (size(xs,2)/=net%ninput) stop "input vector size mismatch"
+    if (size(actuals,2)/=net%noutput) stop "output vector size mismatch"
+    errs = 0
+    do row=1,size(xs,1)
+       call mlp_forward(z,xs(row,:))
+       errs(1) = errs(1) + dist(z,actuals(row,:))
+       if (maxloc(z,1) /= maxloc(actuals(row,:),1)) errs(2) = errs(2) + 1
+    end do
+  end function mlp_error
 
-    if (maxval(x)>10 .or. minval(x)<-10) stop "should normalize mlp inputs"
+  subroutine mlp_train(actuals,xs,eta)
+    real, intent(in), target :: actuals(:,:)
+    real, intent(in), target :: xs(:,:),eta
+    real x(net%ninput),actual(net%noutput)
+    real z(net%noutput)
+    real y(net%nhidden)
+    real delta2(net%noutput),delta1(net%nhidden)
+    integer i,j,row
 
-    ! forward propagation
-    y = matmul(net%w1,x) + net%b1
-    forall (i=1:net%nhidden) y(i) = sigmoid(y(i))
-    z = matmul(net%w2,y) + net%b2
-    forall (i=1:net%noutput) z(i) = sigmoid(z(i))
+    if (size(xs,1)/=size(actuals,1)) stop "input size mismatch"
+    if (size(xs,2)/=net%ninput) stop "input vector size mismatch"
+    if (size(actuals,2)/=net%noutput) stop "output vector size mismatch"
 
-    ! backward propagation of deltas
-    forall (i=1:net%noutput) delta2(i) = (z(i)-actual(i)) * dsigmoidy(z(i))
-    ! delta1 = matmul(transpose(net%w2),delta2)
-    delta1 = matmul(delta2,net%w2)
-    forall (i=1:net%nhidden) delta1(i) = delta1(i) * dsigmoidy(y(i))
-    !print *,delta2
-    ! weight update
-    forall (i=1:net%noutput,j=1:net%nhidden) 
-       net%w2(i,j) = net%w2(i,j) - eta * delta2(i) * y(j)
-    end forall
-    forall (i=1:net%noutput) net%b2(i) = net%b2(i) - eta * delta2(i)
-    forall (i=1:net%nhidden,j=1:net%ninput) 
-       net%w1(i,j) = net%w1(i,j) - eta * delta1(i) * x(j)
-    end forall
-    forall (i=1:net%nhidden) net%b1(i) = net%b1(i) - eta * delta1(i)
-  end subroutine mlp_backward
+    do row=1,size(xs,1)
+       x = xs(row,:)
+       actual = actuals(row,:)
+       
+       if (maxval(x)>10 .or. minval(x)<-10) stop "should normalize mlp inputs"
+       ! forward propagation
+       y = matmul(net%w1,x) + net%b1
+       forall (i=1:net%nhidden) y(i) = sigmoid(y(i))
+       z = matmul(net%w2,y) + net%b2
+       forall (i=1:net%noutput) z(i) = sigmoid(z(i))
+
+       ! backward propagation of deltas
+       forall (i=1:net%noutput) delta2(i) = (z(i)-actual(i)) * dsigmoidy(z(i))
+       ! delta1 = matmul(transpose(net%w2),delta2)
+       delta1 = matmul(delta2,net%w2)
+       forall (i=1:net%nhidden) delta1(i) = delta1(i) * dsigmoidy(y(i))
+       !print *,delta2
+       ! weight update
+       forall (i=1:net%noutput,j=1:net%nhidden) 
+          net%w2(i,j) = net%w2(i,j) - eta * delta2(i) * y(j)
+       end forall
+       forall (i=1:net%noutput) net%b2(i) = net%b2(i) - eta * delta2(i)
+       forall (i=1:net%nhidden,j=1:net%ninput) 
+          net%w1(i,j) = net%w1(i,j) - eta * delta1(i) * x(j)
+       end forall
+       forall (i=1:net%nhidden) net%b1(i) = net%b1(i) - eta * delta1(i)
+    end do
+  end subroutine mlp_train
 
   subroutine mlp_decay(delta)
     real delta
@@ -112,23 +140,22 @@ contains
   end subroutine mlp_decay
 
   subroutine mlp_test
-    integer, parameter :: n = 20
-    real v(n),y(n)
+    integer, parameter :: n = 4
+    real v(n,n)
     integer i,j,errs
     real err
     call mlp_init(n,n/2,n)
+    v = 0
+    forall (i=1:n) v(i,i) = 1
     do i=1,1000
        errs = 0
        err = 0
-       do j=1,10000
+       do j=1,1000
           v = 0
-          v(modulo(j,n)+1) = 1
-          call mlp_backward(y,v,v,1.0)
-          if (maxloc(v,1) /= maxloc(y,1)) errs = errs+1
-          err = err + dist(y,v)
+          v(1,modulo(j,n)+1) = 1
+          call mlp_train(v,v,0.1)
        end do
-       print *,i,errs
-       print *,i,err/10000
+       print *,i,mlp_error(v,v)
     end do
   end subroutine mlp_test
 end module
