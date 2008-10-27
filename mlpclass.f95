@@ -79,17 +79,28 @@ contains
   function mlp_error(actuals,xs) result(errs)
     real, intent(in) :: actuals(:,:)
     real, intent(in) :: xs(:,:)
-    real :: z(size(actuals,2))
+    real :: z(net%noutput)
+    real :: actual(net%noutput)
     real :: errs(2)
     integer i,row
+    logical classmode
     if (size(xs,1)/=size(actuals,1)) stop "input size mismatch"
     if (size(xs,2)/=net%ninput) stop "input vector size mismatch"
-    if (size(actuals,2)/=net%noutput) stop "output vector size mismatch"
+    classmode = (size(actuals,2)==1 .and. net%noutput>1)
+    if (.not. classmode) then
+       if (size(actuals,2)/=net%noutput) stop "output vector size mismatch"
+    end if
     errs = 0
     do row=1,size(xs,1)
        call mlp_forward(z,xs(row,:))
-       errs(1) = errs(1) + dist(z,actuals(row,:))
-       if (maxloc(z,1) /= maxloc(actuals(row,:),1)) errs(2) = errs(2) + 1
+       if (classmode) then
+          actual = 0
+          actual(floor(actuals(row,1))) = 1
+       else
+          actual = actuals(row,:)
+       end if
+       errs(1) = errs(1) + dist(z,actual)
+       if (maxloc(z,1) /= maxloc(actual,1)) errs(2) = errs(2) + 1
     end do
   end function mlp_error
 
@@ -115,10 +126,14 @@ contains
     real y(net%nhidden)
     real delta2(net%noutput),delta1(net%nhidden)
     integer i,j,row
+    logical classmode
 
     if (size(xs,1)/=size(actuals,1)) stop "input size mismatch"
     if (size(xs,2)/=net%ninput) stop "input vector size mismatch"
-    if (size(actuals,2)/=net%noutput) stop "output vector size mismatch"
+    classmode = (size(actuals,2)==1 .and. net%noutput>1)
+    if (.not. classmode) then
+       if (size(actuals,2)/=net%noutput) stop "output vector size mismatch"
+    end if
 
     weights = 1
     if (present(sampled)) weights = sampled
@@ -126,7 +141,13 @@ contains
     do row=1,size(xs,1)
        weight = weights(row)
        x = xs(row,:)
-       actual = actuals(row,:)
+       if (classmode) then
+          actual = 0
+          actual(floor(actuals(row,1))) = 1
+       else
+          actual = actuals(row,:)
+       endif
+          
        
        if (maxval(x)>10 .or. minval(x)<-10) stop "should normalize mlp inputs"
 
@@ -190,7 +211,7 @@ contains
   end subroutine mlp_test
 
   subroutine mlp_mnist()
-    real, allocatable :: inputs(:,:),classes(:),outputs(:,:)
+    real, allocatable :: inputs(:,:),classes(:)
     integer nsamples,nclasses,nfeat
     integer epoch,i
 
@@ -202,17 +223,14 @@ contains
     nsamples = size(classes)
     classes = classes + 1
     nclasses = maxval(classes)
-    allocate(outputs(nsamples,nclasses))
-    outputs = 0
-    forall (i=1:nsamples) outputs(i,floor(classes(i))) = 1
 
     call mlp_init(nfeat,20,nclasses)
 
     do epoch=1,1000
        print *,"***",epoch
        call mlp_clear_info()
-       call mlp_train(outputs,inputs,0.3)
-       print *,epoch,mlp_error(outputs(1:1000,:),inputs(1:1000,:))
+       call mlp_train(reshape(classes,[nsamples,1]),inputs,0.3)
+       print *,epoch,mlp_error(reshape(classes(1:1000),[1000,1]),inputs(1:1000,:))
        call mlp_print_info()
     end do
   end subroutine mlp_mnist
