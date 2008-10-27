@@ -1,0 +1,59 @@
+TODO:
+
+-- OpenMP matrix multiplication
+-- first: script-based parameter optimization
+-- loading and saving
+-- bound procedure version? (probably not)
+
+-- sequential training interface
+   -- hvq all in Fortran, trivial interface (train, train_and_classify)
+   -- internal stages
+      -- nnbr <nclasses*100
+      -- nnet <100k
+      -- hierarchical
+   -- log randomized training parameters with ninput, nclasses, kNN curve, ...
+   -- interface
+      -- init(model,ninput,nclasses)
+      -- classify(model,vector) -> posterior
+      -- train(model,vector,class) -> none
+      -- save(model,file,discard)
+      -- load(model,file)
+
+-- separate simple density estimation via one or two levels of k-means
+
+-- performance of hierarchical nearest neighbor
+
+-- feature extraction...
+
+================================================================
+
+-- label errors and kNN?
+
+-- select per-class k-means instead of nearest neighbor
+   -- maybe with a little RBF
+   -- for small datasets
+
+-- later:
+   -- train invariances by example "all these samples are related"
+   -- learn restricted classes of linear transformations
+   -- pick representatives
+   -- match with maximum likelihood against representatives
+
+-- automatic training/learning of parameter settings for problem classes with randomization
+-- "50% prim" for parameter settings
+-- write network, read network
+
+-- Python writef0, writef1, writef2, writef3, readf0, readf1, ...
+
+-- different feature extraction
+-- different nearest neighbor techniques
+-- Rocchio
+-- RBF?
+
+-- combination techniques
+   -- hvq-classification
+   -- bootstrap
+   -- boosting
+
+-- later
+   -- cascade correlation
