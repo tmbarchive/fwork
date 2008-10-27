@@ -7,6 +7,8 @@ module mlpclass
   type mlp
      integer ninput,nhidden,noutput
      real, allocatable :: b1(:), w1(:,:), b2(:), w2(:,:)
+     integer updates
+     real delta1,delta2
   end type mlp
 
   ! for now, use global variable to make wrapping easier
@@ -91,9 +93,23 @@ contains
     end do
   end function mlp_error
 
-  subroutine mlp_train(actuals,xs,eta)
+  subroutine mlp_clear_info()
+    net%updates = 0
+    net%delta1 = 0
+    net%delta2 = 0
+  end subroutine mlp_clear_info
+
+  subroutine mlp_print_info()
+    print *,"layer1",minval(net%w1),maxval(net%w1),minval(net%b1),maxval(net%b1)
+    print *,"layer2",minval(net%w2),maxval(net%w2),minval(net%b2),maxval(net%b2)
+    print *,"update",net%updates,net%delta1/net%updates,net%delta2/net%updates
+  end subroutine mlp_print_info
+
+  subroutine mlp_train(actuals,xs,eta,sampled)
     real, intent(in), target :: actuals(:,:)
     real, intent(in), target :: xs(:,:),eta
+    real, optional :: sampled(:)
+    real :: weights(size(xs,1)), weight
     real x(net%ninput),actual(net%noutput)
     real z(net%noutput)
     real y(net%nhidden)
@@ -104,11 +120,16 @@ contains
     if (size(xs,2)/=net%ninput) stop "input vector size mismatch"
     if (size(actuals,2)/=net%noutput) stop "output vector size mismatch"
 
+    weights = 1
+    if (present(sampled)) weights = sampled
+
     do row=1,size(xs,1)
+       weight = weights(row)
        x = xs(row,:)
        actual = actuals(row,:)
        
        if (maxval(x)>10 .or. minval(x)<-10) stop "should normalize mlp inputs"
+
        ! forward propagation
        y = matmul(net%w1,x) + net%b1
        forall (i=1:net%nhidden) y(i) = sigmoid(y(i))
@@ -119,15 +140,20 @@ contains
        forall (i=1:net%noutput) delta2(i) = (z(i)-actual(i)) * dsigmoidy(z(i))
        delta1 = matmul(delta2,net%w2)
        forall (i=1:net%nhidden) delta1(i) = delta1(i) * dsigmoidy(y(i))
+       
        ! weight update
        forall (i=1:net%noutput,j=1:net%nhidden) 
           net%w2(i,j) = net%w2(i,j) - eta * delta2(i) * y(j)
        end forall
-       forall (i=1:net%noutput) net%b2(i) = net%b2(i) - eta * delta2(i)
+       forall (i=1:net%noutput) net%b2(i) = net%b2(i) - eta * delta2(i) * weight
        forall (i=1:net%nhidden,j=1:net%ninput) 
           net%w1(i,j) = net%w1(i,j) - eta * delta1(i) * x(j)
        end forall
-       forall (i=1:net%nhidden) net%b1(i) = net%b1(i) - eta * delta1(i)
+       forall (i=1:net%nhidden) net%b1(i) = net%b1(i) - eta * delta1(i) * weight
+
+       net%updates = net%updates + 1
+       net%delta1 = net%delta1 + maxval(abs(delta1))
+       net%delta2 = net%delta2 + maxval(abs(delta2))
     end do
   end subroutine mlp_train
 
@@ -184,10 +210,10 @@ contains
 
     do epoch=1,1000
        print *,"***",epoch
-       call mlp_train(outputs(1:10000,:),inputs(1:10000,:),0.3)
+       call mlp_clear_info()
+       call mlp_train(outputs,inputs,0.3)
        print *,epoch,mlp_error(outputs(1:1000,:),inputs(1:1000,:))
-       print *,epoch,minval(net%w1),maxval(net%w1),minval(net%b1),maxval(net%b1)
-       print *,epoch,minval(net%w2),maxval(net%w2),minval(net%b2),maxval(net%b2)
+       call mlp_print_info()
     end do
   end subroutine mlp_mnist
 end module
