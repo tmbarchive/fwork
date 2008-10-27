@@ -1,6 +1,6 @@
 # -*- Python -*-
 
-opt = " -g -fbounds-check"
+opt = " -g -O4 -fbounds-check"
 # opt = " -g -fopenmp -fbounds-check -O4"
 
 sources = ["dataio.f95","mlpclass.f95"]

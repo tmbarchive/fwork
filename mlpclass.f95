@@ -1,7 +1,9 @@
 module mlpclass
 
-  implicit none
+  use dataio
   
+  implicit none
+
   type mlp
      integer ninput,nhidden,noutput
      real, allocatable :: b1(:), w1(:,:), b2(:), w2(:,:)
@@ -55,6 +57,10 @@ contains
     call random_number(net%b1)
     call random_number(net%w2)
     call random_number(net%b2)
+    net%w1 = 2*net%w1 - 1
+    net%b1 = 2*net%b1 - 1
+    net%w2 = 2*net%w2 - 1
+    net%b2 = 2*net%b2 - 1
   end subroutine mlp_init
 
   subroutine mlp_forward(z,x)
@@ -111,10 +117,8 @@ contains
 
        ! backward propagation of deltas
        forall (i=1:net%noutput) delta2(i) = (z(i)-actual(i)) * dsigmoidy(z(i))
-       ! delta1 = matmul(transpose(net%w2),delta2)
        delta1 = matmul(delta2,net%w2)
        forall (i=1:net%nhidden) delta1(i) = delta1(i) * dsigmoidy(y(i))
-       !print *,delta2
        ! weight update
        forall (i=1:net%noutput,j=1:net%nhidden) 
           net%w2(i,j) = net%w2(i,j) - eta * delta2(i) * y(j)
@@ -158,9 +162,37 @@ contains
        print *,i,mlp_error(v,v)
     end do
   end subroutine mlp_test
+
+  subroutine mlp_mnist()
+    real, allocatable :: inputs(:,:),classes(:),outputs(:,:)
+    integer nsamples,nclasses,nfeat
+    integer epoch,i
+
+    call read_mnist(inputs,"mnist/train-images-idx3-ubyte")
+    call read_mnist(classes,"mnist/train-labels-idx1-ubyte")
+
+    inputs = inputs / maxval(inputs)
+    nfeat = size(inputs,2)
+    nsamples = size(classes)
+    classes = classes + 1
+    nclasses = maxval(classes)
+    allocate(outputs(nsamples,nclasses))
+    outputs = 0
+    forall (i=1:nsamples) outputs(i,floor(classes(i))) = 1
+
+    call mlp_init(nfeat,20,nclasses)
+
+    do epoch=1,1000
+       print *,"***",epoch
+       call mlp_train(outputs(1:10000,:),inputs(1:10000,:),0.3)
+       print *,epoch,mlp_error(outputs(1:1000,:),inputs(1:1000,:))
+       print *,epoch,minval(net%w1),maxval(net%w1),minval(net%b1),maxval(net%b1)
+       print *,epoch,minval(net%w2),maxval(net%w2),minval(net%b2),maxval(net%b2)
+    end do
+  end subroutine mlp_mnist
 end module
 
 program main
   use mlpclass
-  call mlp_test()
+  call mlp_mnist()
 end program main
