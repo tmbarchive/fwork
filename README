@@ -57,3 +57,24 @@ TODO:
 
 -- later
    -- cascade correlation
+
+
+# mlp stuff
+# opt = " -g -O4 -fbounds-check"
+# 20s
+# opt = " -O4 -finline"
+# 13s
+# opt = " -O4"
+# 13s
+# ---
+# opt = " -fopenmp -O4"
+# 13s (no directives)
+# 41s (maximum parallel workshare)
+# 7s (parallel do for training, update not critical)
+# 11s (parallel do for training, update critical)
+# ---
+# ifort -O4: 11s
+# ifort -O4, parallel do training, update not critical: 5s
+# fc="/opt/intel/fc/10.1.018/bin/ifort"
+
+   

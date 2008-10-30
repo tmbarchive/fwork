@@ -280,10 +280,10 @@ contains
     open(10,file=trim(fname))
     write(10,fmt="(a/)",advance="no") "P2"
     write(10,fmt="(i0,a,i0,a,i0/)",advance="no") size(a,1)," ",size(a,2)," ",255
-    do i=1,size(a,1)
-       do j=1,size(a,2)
+    do j=1,size(a,2)
+       do i=1,size(a,1)
           byte = max(0,min(255,floor(256 * (a(i,j)-lo) / (hi-lo))))
-          if (j>1) write(10,fmt="(a)",advance="no") " "
+          write(10,fmt="(a)",advance="no") " "
           write(10,fmt="(i0)",advance="no") byte
        end do
        write(10,fmt="(a/)",advance="no") ""
@@ -300,11 +300,11 @@ contains
     open(10,file=trim(fname))
     write(10,fmt="(a/)",advance="no") "P3"
     write(10,fmt="(i0,a,i0,a,i0/)",advance="no") size(a,1)," ",size(a,2)," ",255
-    do i=1,size(a,1)
-       do j=1,size(a,2)
+    do j=1,size(a,2)
+       do i=1,size(a,1)
           do k=1,size(a,3)
              byte = max(0,min(255,floor(256 * (a(i,j,k)-lo) / (hi-lo))))
-             if (j>1) write(10,fmt="(a)",advance="no") " "
+             write(10,fmt="(a)",advance="no") " "
              write(10,fmt="(i0)",advance="no") byte
           end do
        end do

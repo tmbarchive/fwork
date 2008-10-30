@@ -1,14 +1,15 @@
 # -*- Python -*-
 
-opt = " -g -O4 -fbounds-check"
-# opt = " -g -fopenmp -fbounds-check -O4"
+fc = "gfortran"
+opt = " -O4"
+sources = ["dataio.f95","mlpmod.f95","knnmod.f95","quicksort.f95",
+           "quantizers.f95","knneval.f95","jpegio.f95","jpegio_c.c"]
 
-sources = ["dataio.f95","mlpclass.f95"]
-
-env = Environment(FORTRAN="gfortran"+opt,
-                  F90="gfortran"+opt,
-                  F95="gfortran"+opt,
-                  LINK="gfortran"+opt)
+env = Environment(FORTRAN=fc+opt,
+                  F90=fc+opt,
+                  F95=fc+opt,
+                  LINK=fc+opt,
+                  LIBS="-ljpeg",
+                  CFLAGS="-g")
                   
-env.Program("mlpclass",sources)
-
+env.Program("mlp_mnist",["mlp_mnist.f95"]+sources)
