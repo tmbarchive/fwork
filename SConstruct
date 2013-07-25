@@ -2,7 +2,7 @@
 
 opt = " -g"
 opt += " -I/usr/lib/fortran/modules/plplot"
-fc = "gfortran -std=f2003"
+fc = "gfortran -std=f2008ts"
 
 if 1:
     opt += " -O3"
