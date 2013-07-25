@@ -261,16 +261,16 @@ contains
 
     subroutine display_pgm(a)
         real a(:,:)
-        call system("rm -f /tmp/__temp__.pgm")
+        call execute_command_line("rm -f /tmp/__temp__.pgm")
         call write_pgm("/tmp/__temp__.pgm",a)
-        call system("display /tmp/__temp__.pgm")
+        call execute_command_line("display /tmp/__temp__.pgm")
     end subroutine display_pgm
 
     subroutine display_ppm(a)
         real a(:,:,:)
-        call system("rm -f /tmp/__temp__.pgm")
+        call execute_command_line("rm -f /tmp/__temp__.pgm")
         call write_ppm("/tmp/__temp__.ppm",a)
-        call system("display /tmp/__temp__.ppm")
+        call execute_command_line("display /tmp/__temp__.ppm")
     end subroutine display_ppm
 
     subroutine write_pgm(fname,a)
@@ -328,7 +328,7 @@ contains
     subroutine test_table
         real, allocatable :: a(:,:)
         character(100) fname
-        call getarg(1,fname)
+        call get_command_argument(1,fname)
         print *,fname
         call read_table(a,fname)
         print *,size(a,1),size(a,2)

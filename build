@@ -1,0 +1,12 @@
+#!/bin/sh -x
+. /opt/intel/fc/*/bin/ifortvars.sh
+/opt/intel/fc/*/bin/ifort -c -free -std03 -debug -Tf reallocs.f95 
+/opt/intel/fc/*/bin/ifort -c -free -std03 -debug -Tf utils.f95 
+/opt/intel/fc/*/bin/ifort -c -free -std03 -debug -Tf quicksort.f95 
+/opt/intel/fc/*/bin/ifort -c -free -std03 -debug -Tf dataio.f95 
+/opt/intel/fc/*/bin/ifort -c -free -std03 -debug -Tf nnbr.f95 
+/opt/intel/fc/*/bin/ifort -c -free -std03 -debug -Tf knncs.f95 
+/opt/intel/fc/*/bin/ifort -c -free -std03 -debug -Tf mlps.f95 
+/opt/intel/fc/*/bin/ifort -c -free -std03 -debug -Tf quantize.f95 
+/opt/intel/fc/*/bin/ifort -c -free -std03 -debug -Tf uniclasses.f95 
+/opt/intel/fc/*/bin/ifort -free -std03 -debug -Tf uni_mnist.f95 -o uni_mnist

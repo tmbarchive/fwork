@@ -1,0 +1,98 @@
+    ! Evaluate points against segments.  The model consists of points,
+    ! the image consists of segments.
+
+    function evaluate_ps(points,segments,ml,tr,eps,aeps) result(score)
+        type(segment) segments(:)
+        type(point) points(:)
+        type(matchlist) ml
+        integer(2) pairs(:,:)
+        real weights(:),tr(4,2),eps,aeps
+
+        type(segment) seg
+        type(point) pt
+        integer last_point,i,j
+        real rfixed,rscaled,rtotal,tx,ty,tangle,tcos,tsin,tscale,px,py,pa
+        real d,d_scores(2),a_scores(2),total(2),score(2)
+
+        ! the actual transformations
+        tx = mid(tr(1,:))
+        ty = mid(tr(2,:))
+        tangle = mid(tr(3,:))
+        tscale = mid(tr(4,:))
+        tcos = tscale * cos(tangle)
+        tsin = tscale * sin(tangle)
+
+        ! uncertainty that's absolute (independent of position)
+        rfixed = hypot(delta(tr(1,:)),delta(tr(2,:)))
+
+        ! uncertainty that scales with the distance of the vector from the origin
+        rscaled = hypot(delta(tr(3,:)),delta(tr(4,:)))
+
+        last_point = -1
+        total = 0
+        do i=1,size(pairs,1)
+            j = pairs(i,1)
+            if (j==-1) cycle
+            if (last_point/=j) then
+                pt = points(pairs(i,1))
+                px = tcos * pt%x - tsin * pt%y + tx
+                py = tsin * pt%x + tcos * pt%y + ty
+                pa = pt%a + tangle
+                last_point = j
+                rtotal = rfixed + hypot(px,py) * rscaled
+            end if
+            seg = segments(pairs(i,2))
+            d = segment_point_dist(seg%x0,seg%y0,seg%x1,seg%y1,px,py)
+            d_scores = d_score(d,rtotal,eps) * weights(i)
+            if (d_scores(2)<1e-6) then
+                pairs(i,1) = -1
+            else
+                total = total + d_scores
+            end if
+        end do
+        score = total
+    end function evaluate_ps
+
+    subroutine search_ps(points,segments,ml,tr,eps,aeps,minq)
+        real, parameter :: mindelta(4) = [1.0,1.0,0.01,0.002]
+        type(segment) segments(:),seg
+        type(point) points(:),pt
+        type(matchlist) ml
+        integer(2) pairs(:,:)
+        real weights(:),tr(4,2),eps,aeps,minq
+        real best_score(2),best_tr(4,2)
+        integer counts
+
+        counts = 0
+        call recursive(pairs,tr,1)
+    contains
+        recursive subroutine recursive(pairs,tr,depth)
+            integer(2) pairs(:,:)
+            integer depth
+            real tr(4,2)
+            real score(2)
+            real, allocatable :: subtr(:,:,:)
+            integer(2), allocatable :: epairs
+            real, allocatable :: eweights
+            integer i
+
+            if (verbosity>=10) print *,"R",depth,tr
+
+            counts = counts+1
+            epairs = pairs
+            score = evaluate_ps(points,segments,epairs,weights,tr,eps,aeps)
+            if (score(2)<minq) return
+            if (all(deltav(tr)<mindelta)) then
+                if (best_score(2)<score(2)) then
+                    best_score = score
+                    best_tr = tr
+                end if
+                return
+            end if
+            call split(subtr,tr)
+            do i=1,size(subtr,1)
+                call recursive(epairs,subtr(i,:,:),depth+1)
+            end do
+        end subroutine recursive
+    end subroutine search_ps
+
